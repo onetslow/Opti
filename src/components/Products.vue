@@ -1,58 +1,63 @@
 <template>
-  <div>
-    <h1>Список товаров</h1>
+    <DataTable
+        :value="products"
+        :lazy="true"
+        :loading="dataStore.loading"
+        :paginator="true"
+        :rows="perpage"
+        :rowsPerPageOptions="[2, 5, 10]"
+        :totalRecords="products_total"
+        @page="onPageChange"
+        responsive-Layout="scroll"
+        :laading="true"
+        :first="offset"
+    >
 
-    <div v-if="loading">Загрузка...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+        <Column field="id" header="№"/>
+        <Column field="name" header="Наименование товара"/>
+        <Column field="category_id" header="ID категории"/>
+        <Column field="price" header="Цена"/>
+        <Column field="description" header="Описание"/>
 
-    <ul v-else>
-      <li v-for="product in products" :key="product.id">
-        {{ product.name }}
-      </li>
-    </ul>
-  </div>
+    </DataTable>
 </template>
 
 <script>
-import axios from 'axios'
-import { useAuthStore } from '@/stores/authStore'
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
+import { useDataStore } from '@/stores/dataStore'
 
 export default {
-  name: 'Products',
-  data() {
-    return {
-      products: [],
-      loading: true,
-      error: null,
-    }
-  },
-  mounted() {
-    this.fetchProducts()
-  },
-  methods: {
-    async fetchProducts() {
-      try {
-        this.loading = true
-        this.error = null
-
-        const authStore = useAuthStore()
-        const token = authStore.token
-
-        const response = await axios.get('http://127.0.0.1:8001/api/products', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        this.products = response.data
-      } catch (err) {
-        this.error = 'Ошибка при загрузке товаров'
-        console.error(err)
-      } finally {
-        this.loading = false
-      }
+    name: "Products",
+    components: {DataTable, Column},
+    data() {
+        return {
+            dataStore: useDataStore(),
+            perpage: 5,
+            offset: 0,
+        }
     },
-  },
+    computed: {
+        products() {
+            return this.dataStore.products;
+        },
+        products_total() {
+            return this.dataStore.products_total;
+        }
+    },
+    mounted() {
+        console.log('Products component MOUNTED!');
+        this.dataStore.get_products();
+        this.dataStore.get_products_total();
+        console.log('Products=', this.products);
+    },
+    methods: {
+        onPageChange(event) {
+            this.offset = event.first;
+            this.perpage = event.rows;
+            this.dataStore.get_products( this.offset / this.perpage, this.perpage );
+        }
+    }
 }
 </script>
 

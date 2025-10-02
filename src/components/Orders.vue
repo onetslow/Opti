@@ -1,74 +1,66 @@
 <template>
-  <div>
-    <h2>Список заказов</h2>
+    <DataTable
+        :value="orders"
+        :lazy="true"
+        :loading="dataStore.loading"
+        :paginator="true"
+        :rows="perpage"
+        :rowsPerPageOptions="[2, 5, 10]"
+        :totalRecords="orders_total"
+        @page="onPageChange"
+        responsive-Layout="scroll"
+        :laading="true"
+        :first="offset"
+    >
 
-    <div v-if="loading">Загрузка...</div>
-    <div v-else-if="error">Ошибка загрузки: {{ error }}</div>
-    <div v-else-if="orders.length === 0">Заказы не найдены</div>
-
-    <table v-else>
-      <thead>
-        <tr>
-          <th>ID заказа</th>
-          <th>Пользователь</th>
-          <th>Дата заказа</th>
-          <th>Сумма</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="order in orders" :key="order.id">
-          <td>{{ order.id }}</td>
-          <td>{{ order.user_name }}</td>
-          <td>{{ order.order_date }}</td>
-          <td>{{ order.total_price }} </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+        <Column field="id" header="№"/>
+        <Column field="user_id" header="ID пользователя"/>
+        <Column field="order_date" header="Дата заказа"/>
+        <Column field="created_at" header="Дата создания"/>
+    </DataTable>
 </template>
 
 <script>
-import axios from "axios";
-import { useAuthStore } from "@/stores/authStore";
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
+import { useDataStore } from '@/stores/dataStore'
 
 export default {
-  name: "Orders",
-  data() {
-    return {
-      orders: [],
-      loading: true,
-      error: null,
-    };
-  },
-  mounted() {
-    this.fetchOrders();
-  },
-  methods: {
-    async fetchOrders() {
-      try {
-        this.loading = true;
-        this.error = null;
-
-        const authStore = useAuthStore();
-        const token = authStore.token;
-
-        const response = await axios.get("http://127.0.0.1:8001/api/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-  
-        this.orders = response.data;
-      } catch (err) {
-        console.error("Ошибка загрузки заказов:", err);
-        this.error = "Не удалось загрузить заказы";
-      } finally {
-        this.loading = false;
-      }
+    name: "Orders",
+    components: {DataTable, Column},
+    data() {
+        return {
+            dataStore: useDataStore(),
+            perpage: 5,
+            offset: 0,
+        }
     },
-  },
-};
+    computed: {
+        orders() {
+            return this.dataStore.orders;
+        },
+        orders_total() {
+            return this.dataStore.orders_total;
+        }
+    },
+    mounted() {
+        console.log('Orders component MOUNTED!');
+        this.dataStore.get_orders();
+        this.dataStore.get_orders_total();
+        console.log('Orders=', this.orders);
+    },
+    methods: {
+        onPageChange(event) {
+            this.offset = event.first;
+            this.perpage = event.rows;
+            this.dataStore.get_orders( this.offset / this.perpage, this.perpage );
+        }
+    }
+}
 </script>
 
 <style scoped>
-
+.error {
+  color: red;
+}
 </style>
